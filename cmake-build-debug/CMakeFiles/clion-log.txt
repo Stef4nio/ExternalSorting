@@ -1,0 +1,4 @@
+C:\Users\stef4\.CLion2019.3\system\cygwin_cmake\bin\cmake.exe -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" "/cygdrive/e/STEF/WORKSPACE(For C++)/ExternalSorting"
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /cygdrive/e/STEF/WORKSPACE(For C++)/ExternalSorting/cmake-build-debug

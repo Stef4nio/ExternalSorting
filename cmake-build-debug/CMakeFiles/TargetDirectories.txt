@@ -1,0 +1,3 @@
+/cygdrive/e/STEF/WORKSPACE(For C++)/ExternalSorting/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/cygdrive/e/STEF/WORKSPACE(For C++)/ExternalSorting/cmake-build-debug/CMakeFiles/ExternalSorting.dir
+/cygdrive/e/STEF/WORKSPACE(For C++)/ExternalSorting/cmake-build-debug/CMakeFiles/edit_cache.dir
