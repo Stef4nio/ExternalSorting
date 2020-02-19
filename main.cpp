@@ -54,7 +54,21 @@ void SortFile(const char *filepath, int RAMsize)
         chunkNumber++;
     }
     int bufferSize = elementsAmount/4;
-    int subchunkSize = elementsAmount*3/(4*(chunkNumber+1));
+    int subchunkSize = (elementsAmount-bufferSize)/(chunkNumber+1);
+    ifstream subchunksStreams[chunkNumber + 1];
+    int subchunks[chunkNumber+1][subchunkSize];
+    int subchunksLocalMinimumIndices[chunkNumber+1];
+    int buffer[bufferSize];
+    for(int i = 0;i<=chunkNumber;i++)
+    {
+        subchunksLocalMinimumIndices[i] = 0;
+        subchunksStreams[i].open("Chunk_"+to_string(i)+".dat",ios::binary);
+        for(int j = 0;j<subchunkSize;j++)
+        {
+
+        }
+    }
+
 }
 
 int main()
