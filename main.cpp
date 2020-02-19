@@ -24,14 +24,10 @@ void SortFile(const char *filepath, int RAMsize)
     int data[elementsAmount];
     int iterator = 0;
     int chunkNumber = 0;
-    while(!fileStream.eof())
+    while(fileStream.read(reinterpret_cast<char*>(data+iterator),sizeof(int)))
     {
-        if(iterator<elementsAmount)
-        {
-            data[iterator] = 0;
-            fileStream.read(reinterpret_cast<char*>(data+iterator),sizeof(int));
-            iterator++;
-        } else
+        iterator++;
+        if(iterator>=elementsAmount)
         {
             sort(data,data+elementsAmount);
             iterator = 0;
@@ -45,11 +41,25 @@ void SortFile(const char *filepath, int RAMsize)
             chunkNumber++;
         }
     }
+    if(iterator>0)
+    {
+        sort(data,data+iterator);
+        ofstream sortedChunkStream;
+        sortedChunkStream.open("Chunk_"+to_string(chunkNumber)+".dat",ios::binary);
+        for(int i = 0;i<iterator;i++)
+        {
+            sortedChunkStream.write(reinterpret_cast<char*>(data+i),sizeof(int));
+        }
+        sortedChunkStream.close();
+        chunkNumber++;
+    }
+    int bufferSize = elementsAmount/4;
+    int subchunkSize = elementsAmount*3/(4*(chunkNumber+1));
 }
 
 int main()
 {
-    int arr[]{1,5,2,9,7,4,6,0};
+    int arr[]{1,5,2,6,7,4,6,0,11};
     /*srand(time(NULL));
     ofstream out;
     out.open("fileToSort.dat",ios::binary);
@@ -64,13 +74,23 @@ int main()
     //sort(arr,arr+9);
 
 
-    /*ofstream sortedChunkStream;
+    ofstream sortedChunkStream;
     sortedChunkStream.open("fileToSort.dat",ios::binary);
-    for(int i = 0;i<9;i++)
+    for(int i = 0;i<5;i++)
     {
-        sortedChunkStream.write(reinterpret_cast<char*>(arr+i),sizeof(int));
+        sortedChunkStream.write(reinterpret_cast<char*>(&arr[i]),sizeof(int));
     }
-    sortedChunkStream.close();*/
+    sortedChunkStream.close();
+
+    ifstream testStream;
+    testStream.open("Chunk_2.dat",ios::binary);
+    int number[4];
+    int iter = 0;
+    while(testStream.read(reinterpret_cast<char*>(&number[iter]),sizeof(int)))
+    {
+        cout<<number[iter]<<endl;
+        iter++;
+    }
 
     //SortFile("fileToSort.dat",sizeof(int)*2);
 
