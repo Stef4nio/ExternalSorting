@@ -15,15 +15,64 @@ static const long FILE_SIZE = 500000;
     return filestatus.st_size;
 }*/
 
+//Writes as much data as possible and returns amount of written data
+int WriteDataToArray(int* array,ifstream& inputStream, int arrayLength)
+{
+    int iterator = 0;
+    while(iterator<arrayLength&&inputStream.read(reinterpret_cast<char*>(array+iterator),sizeof(int)))
+    {
+        iterator++;
+    }
+    return iterator;
+}
+
+void AppendDataToDisk(int* array, basic_string<char, char_traits<char>, allocator<char>> filepath, int arrayLength)
+{
+    ofstream outStream;
+    outStream.open(filepath,ios::binary|ios::app);
+    for(int i = 0;i<arrayLength;i++)
+    {
+        outStream.write(reinterpret_cast<char*>(array+i),sizeof(int));
+    }
+    outStream.close();
+}
+
+void WriteDataToDisk(int* array, basic_string<char, char_traits<char>, allocator<char>> filepath, int arrayLength)
+{
+    ofstream outStream;
+    outStream.open(filepath,ios::binary);
+    for(int i = 0;i<arrayLength;i++)
+    {
+        outStream.write(reinterpret_cast<char*>(array+i),sizeof(int));
+    }
+    outStream.close();
+}
+
+bool AreAllSteamsClosed(const ifstream * array, int arrayLength)
+{
+    for(int i = 0;i<arrayLength;i++)
+    {
+        if(array[i].is_open())
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+
 void SortFile(const char *filepath, int RAMsize)
 {
     //int elementsAmount = RAMsize/sizeof(int) + 1;
-    int elementsAmount = RAMsize/sizeof(int) ;
+    int elementsAmount = RAMsize/sizeof(int);
+
     ifstream fileStream;
     fileStream.open(filepath, ios::binary);
+
     int data[elementsAmount];
     int iterator = 0;
     int chunkNumber = 0;
+
     while(fileStream.read(reinterpret_cast<char*>(data+iterator),sizeof(int)))
     {
         iterator++;
@@ -31,16 +80,11 @@ void SortFile(const char *filepath, int RAMsize)
         {
             sort(data,data+elementsAmount);
             iterator = 0;
-            ofstream sortedChunkStream;
-            sortedChunkStream.open("Chunk_"+to_string(chunkNumber)+".dat",ios::binary);
-            for(int i = 0;i<elementsAmount;i++)
-            {
-                sortedChunkStream.write(reinterpret_cast<char*>(data+i),sizeof(int));
-            }
-            sortedChunkStream.close();
+            WriteDataToDisk(data, "Chunk_" + to_string(chunkNumber) + ".dat", elementsAmount);
             chunkNumber++;
         }
     }
+    fileStream.close();
     if(iterator>0)
     {
         sort(data,data+iterator);
@@ -53,69 +97,110 @@ void SortFile(const char *filepath, int RAMsize)
         sortedChunkStream.close();
         chunkNumber++;
     }
+
     int bufferSize = elementsAmount/4;
     int subchunkSize = (elementsAmount-bufferSize)/(chunkNumber+1);
-    ifstream subchunksStreams[chunkNumber + 1];
-    int subchunks[chunkNumber+1][subchunkSize];
-    int subchunksLocalMinimumIndices[chunkNumber+1];
+
+    ifstream subchunksStreams[chunkNumber];
+    int subchunks[chunkNumber][subchunkSize];
+    int subchunksLocalMinimumIndices[chunkNumber];
+    int subchunkCurrSizes[chunkNumber];
+
+    int amountOfElementsInBuffer = 0;
     int buffer[bufferSize];
-    for(int i = 0;i<=chunkNumber;i++)
+    for(int i = 0;i<chunkNumber;i++)
     {
         subchunksLocalMinimumIndices[i] = 0;
         subchunksStreams[i].open("Chunk_"+to_string(i)+".dat",ios::binary);
-        for(int j = 0;j<subchunkSize;j++)
-        {
-
-        }
+        subchunkCurrSizes[i] = WriteDataToArray(subchunks[i], subchunksStreams[i], subchunkSize);
     }
 
+    ofstream clearStream;
+    clearStream.open(filepath,ios::binary|ios::trunc);
+    clearStream.close();
+
+    while(!AreAllSteamsClosed(subchunksStreams,chunkNumber))
+    {
+        if(amountOfElementsInBuffer<bufferSize)
+        {
+            int lowestMinSubchunkIndex = 0;
+            bool isMinInitialized = false;
+            int min = 0;
+            for(int i = 0;i<chunkNumber;i++)
+            {
+                if(subchunksStreams[i].is_open()&&(!isMinInitialized||subchunks[i][subchunksLocalMinimumIndices[i]]<min))
+                {
+                    min = subchunks[i][subchunksLocalMinimumIndices[i]];
+                    lowestMinSubchunkIndex = i;
+                    isMinInitialized = true;
+                }
+            }
+            buffer[amountOfElementsInBuffer] = subchunks[lowestMinSubchunkIndex][subchunksLocalMinimumIndices[lowestMinSubchunkIndex]];
+            amountOfElementsInBuffer++;
+            subchunksLocalMinimumIndices[lowestMinSubchunkIndex]++;
+            if(subchunksLocalMinimumIndices[lowestMinSubchunkIndex]>=subchunkCurrSizes[lowestMinSubchunkIndex])
+            {
+                int tempSize = WriteDataToArray(subchunks[lowestMinSubchunkIndex],subchunksStreams[lowestMinSubchunkIndex],subchunkSize);
+                subchunkCurrSizes[lowestMinSubchunkIndex] = tempSize;
+                subchunksLocalMinimumIndices[lowestMinSubchunkIndex] = 0;
+                if(tempSize == 0)
+                {
+                    subchunksStreams[lowestMinSubchunkIndex].close();
+                }
+            }
+        } else
+        {
+            AppendDataToDisk(buffer, filepath, bufferSize);
+            amountOfElementsInBuffer = 0;
+        }
+    }
+    if(amountOfElementsInBuffer>0)
+    {
+        AppendDataToDisk(buffer, filepath, amountOfElementsInBuffer);
+    }
+    for(int i = 0; i<chunkNumber;i++)
+    {
+        string file = "Chunk_" + to_string(i) + ".dat";
+        remove(file.data());
+    }
 }
 
 int main()
 {
-    int arr[]{1,5,2,6,7,4,6,0,11};
-    /*srand(time(NULL));
+    srand(time(NULL));
     ofstream out;
     out.open("fileToSort.dat",ios::binary);
     int num;
-    long numAmount = FILE_SIZE/ sizeof(int);
+    //long numAmount = FILE_SIZE/ sizeof(int);
+    long numAmount = 32;
     for(long i = 0;i<numAmount;i++)
     {
         num = rand() % 100;
         out.write(reinterpret_cast<const char *>(&num), sizeof(num));
     }
-    out.close();*/
-    //sort(arr,arr+9);
+    out.close();
 
 
-    ofstream sortedChunkStream;
+    /*ofstream sortedChunkStream;
     sortedChunkStream.open("fileToSort.dat",ios::binary);
     for(int i = 0;i<5;i++)
     {
         sortedChunkStream.write(reinterpret_cast<char*>(&arr[i]),sizeof(int));
     }
-    sortedChunkStream.close();
+    sortedChunkStream.close();*/
+
+    SortFile("fileToSort.dat",sizeof(int)*8);
 
     ifstream testStream;
-    testStream.open("Chunk_2.dat",ios::binary);
-    int number[4];
+    testStream.open("fileToSort.dat",ios::binary);
+    int number;
     int iter = 0;
-    while(testStream.read(reinterpret_cast<char*>(&number[iter]),sizeof(int)))
+    while(testStream.read(reinterpret_cast<char*>(&number),sizeof(int)))
     {
-        cout<<number[iter]<<endl;
+        cout<<number<<endl;
         iter++;
     }
 
-    //SortFile("fileToSort.dat",sizeof(int)*2);
-
-/*    int loh[9];
-    ifstream lohStream;
-    lohStream.open("Chunk_9.dat",ios::binary);
-    for(int i = 0;i<9;i++)
-    {
-        lohStream.read(reinterpret_cast<char*>(loh+i),sizeof(int));
-    }*/
-    //remove("Chunk_9.dat");
     cout<<"pizdec";
     return 0;
 }
