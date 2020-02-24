@@ -6,14 +6,8 @@
 
 using namespace std;
 
-static const long FILE_SIZE = 500000;
+static const long FILE_SIZE = 500000000;
 
-/*long int GetFileSize(const char* filepath)
-{
-    struct stat filestatus;
-    stat( "test.txt", &filestatus );
-    return filestatus.st_size;
-}*/
 
 //Writes as much data as possible and returns amount of written data
 int WriteDataToArray(int* array,ifstream& inputStream, int arrayLength)
@@ -63,13 +57,12 @@ bool AreAllSteamsClosed(const ifstream * array, int arrayLength)
 
 void SortFile(const char *filepath, int RAMsize)
 {
-    //int elementsAmount = RAMsize/sizeof(int) + 1;
     int elementsAmount = RAMsize/sizeof(int);
 
     ifstream fileStream;
     fileStream.open(filepath, ios::binary);
 
-    int data[elementsAmount];
+    int *data = new int[elementsAmount];
     int iterator = 0;
     int chunkNumber = 0;
 
@@ -98,16 +91,23 @@ void SortFile(const char *filepath, int RAMsize)
         chunkNumber++;
     }
 
+    delete[](data);
+
     int bufferSize = elementsAmount/4;
     int subchunkSize = (elementsAmount-bufferSize)/(chunkNumber+1);
 
     ifstream subchunksStreams[chunkNumber];
-    int subchunks[chunkNumber][subchunkSize];
+    int *subchunks[chunkNumber];
     int subchunksLocalMinimumIndices[chunkNumber];
     int subchunkCurrSizes[chunkNumber];
 
+    for(int i = 0; i<chunkNumber;i++)
+    {
+        subchunks[i] = new int[subchunkSize];
+    }
+
     int amountOfElementsInBuffer = 0;
-    int buffer[bufferSize];
+    int *buffer = new int[bufferSize];
     for(int i = 0;i<chunkNumber;i++)
     {
         subchunksLocalMinimumIndices[i] = 0;
@@ -163,44 +163,63 @@ void SortFile(const char *filepath, int RAMsize)
         string file = "Chunk_" + to_string(i) + ".dat";
         remove(file.data());
     }
+
+    delete[](buffer);
+    for(int i = 0; i<chunkNumber;i++)
+    {
+        delete[](subchunks[i]);
+    }
 }
 
-int main()
+bool checkIfFileIsSorted(const char* filepath)
 {
-    srand(time(NULL));
+    ifstream testStream;
+    testStream.open(filepath,ios::binary);
+    int number;
+    int prevNum = 0;
+    while(testStream.read(reinterpret_cast<char*>(&number),sizeof(int)))
+    {
+        if(prevNum>number)
+        {
+            return false;
+        }
+        prevNum = number;
+    }
+    return true;
+}
+
+void generateRandomFile(const char* filename)
+{
+    srand(1448);
     ofstream out;
-    out.open("fileToSort.dat",ios::binary);
+    out.open(filename,ios::binary);
     int num;
-    //long numAmount = FILE_SIZE/ sizeof(int);
-    long numAmount = 32;
+    long numAmount = FILE_SIZE/ sizeof(int);
     for(long i = 0;i<numAmount;i++)
     {
         num = rand() % 100;
         out.write(reinterpret_cast<const char *>(&num), sizeof(num));
     }
     out.close();
+}
+
+int main()
+{
+    //generateRandomFile("fileToSort.dat");
 
 
-    /*ofstream sortedChunkStream;
-    sortedChunkStream.open("fileToSort.dat",ios::binary);
-    for(int i = 0;i<5;i++)
-    {
-        sortedChunkStream.write(reinterpret_cast<char*>(&arr[i]),sizeof(int));
-    }
-    sortedChunkStream.close();*/
+    /*auto t1 = std::chrono::high_resolution_clock::now();
+    SortFile("fileToSort.dat",125000000);
+    auto t2 = std::chrono::high_resolution_clock::now();
 
-    SortFile("fileToSort.dat",sizeof(int)*8);
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
 
-    ifstream testStream;
-    testStream.open("fileToSort.dat",ios::binary);
-    int number;
-    int iter = 0;
-    while(testStream.read(reinterpret_cast<char*>(&number),sizeof(int)))
-    {
-        cout<<number<<endl;
-        iter++;
-    }
+    std::cout << duration << endl;*/
 
-    cout<<"pizdec";
+    bool isSorted = checkIfFileIsSorted("fileToSort.dat");
+
+    cout<<(isSorted?"File is sorted":"File is not sorted")<<endl;
+
+    cout<<"Done!";
     return 0;
 }
