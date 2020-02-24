@@ -205,16 +205,16 @@ void generateRandomFile(const char* filename)
 
 int main()
 {
-    //generateRandomFile("fileToSort.dat");
+    generateRandomFile("fileToSort.dat");
 
 
-    /*auto t1 = std::chrono::high_resolution_clock::now();
+    auto t1 = chrono::high_resolution_clock::now();
     SortFile("fileToSort.dat",125000000);
-    auto t2 = std::chrono::high_resolution_clock::now();
+    auto t2 = chrono::high_resolution_clock::now();
 
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+    auto duration = chrono::duration_cast<chrono::microseconds>( t2 - t1 ).count();
 
-    std::cout << duration << endl;*/
+    std::cout << duration << endl;
 
     bool isSorted = checkIfFileIsSorted("fileToSort.dat");
 
